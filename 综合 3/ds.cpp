@@ -3,7 +3,9 @@ using namespace std;
 
 
 
-User::User(string _name, string _pwd, int _level):name(_name), pwd(_pwd), level(_level){
+User::User(string _name, string _pwd, int _level): level(_level){
+	this->name = string(_name);
+	this->pwd = string(_pwd);
 	this->level = 0;
 }
 string User::getName(){

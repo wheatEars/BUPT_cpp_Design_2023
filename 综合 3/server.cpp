@@ -99,19 +99,21 @@ int trans(char type, string &data = *(new string(""))){
 	SOCKET srvSock = sockList[fd];
 	char *cmd = (char *)malloc(sizeof(char));
 	*cmd = type;
+	cout << "Send "<< fd << " cmd:" << *cmd << "\n";
 	int state = send(srvSock, cmd, sizeof(char), 0);
 	if(state < 0){
-		//cout << "net fail\n";
+		cout << fd << ": Net fail in sending cmd\n";
 		return -1;
 	}
-	char op[1000];
+	char op[100000];
 	if(type == 'g'){
 		memset(op, 0, sizeof(op));
 		state = recv(srvSock, op, sizeof(op), 0);
 		if(state < 0){
-			//cout << "net fail\n";
+			cout << fd << ": Net fail in 1st OK\n";
 			return -1;
 		}
+		cout << "Recived "<< fd << " Message:" << op << "\n";
 		data = string(op);
 		return 0;
 	}
@@ -119,24 +121,27 @@ int trans(char type, string &data = *(new string(""))){
 		memset(op, 0, sizeof(op));
 		state = recv(srvSock, op, sizeof(op), 0);
 		if(state < 0){
-			//cout << "net fail\n";
+			cout << fd << ": Net fail in 1st shake\n";
 			return -1;
 		}
+		cout << "Recived "<< fd << ": 1st Handshake\n";
 	}
 	if(type == 's'){
 		char screen[1000];
 		strcpy(screen, data.c_str());
+		cout << "send "<< fd << ": Screen\n";
 		state = send(srvSock, screen, sizeof(screen), 0);
 		if(state < 0){
-			//cout << "net fail\n";
+			cout << fd << ": Net fail in showing screen\n";
 			return -1;
 		}
 		memset(op, 0, sizeof(op));
 		state = recv(srvSock, op, sizeof(op), 0);
-			if(state < 0){
-			//cout << "net fail\n";
+		if(state < 0){
+			cout << fd << ": Net fail in 2nd shake\n";
 			return -1;
 		}
+		cout << "Recived "<< fd << ": 2nd Handshake\n";
 	}
 	return 0;
 }
@@ -310,6 +315,7 @@ void process_sign_up(){
 		layer[fd] = EXIT;
 		return;
 	}
+	cout << "Sign up for user" << username<< endl;
 	//显示
 	screen = "password: ";
 	networkState = trans('s', screen);
@@ -323,6 +329,7 @@ void process_sign_up(){
 		layer[fd] = EXIT;
 		return;
 	}
+	cout << "With password" << pwd << endl;
 	//注册
 	bool ok = true;
 	pthread_mutex_lock(&userInfoLock);
@@ -335,6 +342,7 @@ void process_sign_up(){
 	pthread_mutex_unlock(&userInfoLock);
 	if(ok == false){
 		//发送错误信息
+		cout << "Same name: " << username << endl;
 		screen = "Username already existed, wanna retry?[y/n]\n";
 		networkState = trans('s', screen);
 
@@ -364,6 +372,8 @@ void process_sign_up(){
 			}
 		}
 	}
+	
+	cout << "No same name\n"; 
 	screen = "Your role is?\n1.player 2.author\n";
 	networkState = trans('s', screen);
 	if(networkState < 0){
@@ -381,7 +391,7 @@ void process_sign_up(){
 
 		pthread_mutex_lock(&userInfoLock);
 		if(op[0] == '1' || op[0] == 'p' || op[0] == 'P'){u = new Player(username, pwd,0,0,0); break;}
-		if(op[0] == '2' || op[0] == 'a' || op[0] == 'A'){u = new Author(username, pwd,0,0); break;}
+		else if(op[0] == '2' || op[0] == 'a' || op[0] == 'A'){u = new Author(username, pwd,0,0); break;}
 		else{
 			pthread_mutex_unlock(&userInfoLock);
 			screen = "Unexpected Input!\n";
@@ -393,9 +403,11 @@ void process_sign_up(){
 			Sleep(1000);
 			return;
 		}
-		pthread_mutex_unlock(&userInfoLock);
 	}
-	
+	pthread_mutex_unlock(&userInfoLock);
+	if(u == nullptr){
+		cout << "wtf??\n";
+	}
 	userList.push_back(u);
 	screen = "Done!";
 	networkState = trans('s', screen);
@@ -1391,7 +1403,7 @@ void *process_main(void *arg){
 	lagTest();
 	int fd = thread2int[pthread_self()];
 	while(1){
-		cout << layer[fd]<<" "<<fd << "\n";
+		cout << fd << " Go to layer " << layer[fd] << "\n";
 		if(exitFlag.load()){//检测到全局退出信号，结束所有进程
 			layer[fd] = EXIT;
 		}
@@ -1438,7 +1450,14 @@ void *mainConsole(void *arg){
 			pthread_mutex_unlock(&userInfoLock);
 		}
 		else if(op == "dataInfo"){
+			pthread_mutex_lock(&userInfoLock);
 			cout << "注册用户数: " << userList.size() << "\n";
+			for(User *user : userList){
+				cout << user->getName() << "\n";
+				cout << "\t 密码" << user->getPwd() << "\n";
+				cout << "\t 等级" << user->getLevel() << "\n";	
+			}
+			pthread_mutex_unlock(&userInfoLock);
 			cout << "在库单词数: " << quizList.size() << "\n";
 		}
 		else if(op == "exit"){

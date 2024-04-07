@@ -27,10 +27,9 @@ int main(){
 	Sleep(1000);
 	char cmd[100000];
 	char screen[100000];
-	char input[100];
-		cout<<"!";
+	char input[10000];
 	char *OK = (char *)malloc(sizeof(char));
-	*OK = 1;
+	*OK = 6;
 	while(1){
 		memset(cmd, 0, sizeof(cmd));
 		memset(screen, 0, sizeof(screen));
@@ -41,31 +40,38 @@ int main(){
 			return 0;
 		}
 		
-		switch(*cmd){
+		switch(cmd[0]){
 			case 'c'://清屏
 				system("cls");
 				send(cliSock, OK, sizeof(char), 0);
+				//cout << "ACK for: C\n";
 				break;
 
 			case 's'://数据
 				send(cliSock, OK, sizeof(char), 0);
-
+				//cout << "ACK for: S1\n";
 				recv(cliSock, screen, sizeof(screen), 0);
 				cout << screen;
 
 				send(cliSock, OK, sizeof(char), 0);
+				//cout << "ACK for: S2\n";
 				break;
 			case 'g'://输入
+				
+				cin.sync();
 				cin >> input;
 				send(cliSock, input, sizeof(input), 0);
+				//cout << "ACK for: G\n";
 				break;
 			case 't'://延迟测试
 				send(cliSock, OK, sizeof(char), 0);
+				//cout << "ACK for: T\n";
 				break;
 			case 'e'://退出
 
 				
 				send(cliSock, OK, sizeof(char), 0);
+				cout << "ACK for: E\n";
 				shutdown(cliSock, SD_BOTH);
 				return 0;
 		}
